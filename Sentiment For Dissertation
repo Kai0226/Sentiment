@@ -1,13 +1,37 @@
-package au.edu.curtin.solrDataExtract9;
+package au.edu.curtin.solrDataExtract12;
 
 import java.sql.*;
+import java.util.Calendar;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
+import java.util.Random;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.solr.internal.csv.writer.CSVWriter;
 import org.json.simple.JSONObject;
+
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
+import au.edu.curtin.solrDataExtract4.NLP;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.neural.rnn.RNNCoreAnnotations;
 import edu.stanford.nlp.pipeline.Annotation;
@@ -17,133 +41,365 @@ import edu.stanford.nlp.sentiment.SentimentCoreAnnotations.SentimentAnnotatedTre
 import edu.stanford.nlp.trees.Tree;
 import edu.stanford.nlp.util.CoreMap;
 
-public class codeForDissertation{
-	//Create a pipeline of the Stanford CoreNLP
-		static StanfordCoreNLP pipeline = null;
-		//Create a string variable for recording sentiment result
-		static String scoreStr;
-		//Initiate the Stanford pipeline
-		//Reference: https://stanfordnlp.github.io/CoreNLP/api.html
-	    public static void init() 
-	    {
-	    	//Set up pipeline properties
-	        Properties props = new Properties();
-	        //Set the list of annotators to run
-	        props.setProperty("annotators", "tokenize, ssplit, parse, sentiment");
-	        //Build pipeline
-	        pipeline = new StanfordCoreNLP(props);
-	    }
+
+public class continueCode{
+	
+	static StanfordCoreNLP pipeline = null;
+	static String scoreStr;
+    public static void init() 
+    {
+    	// set up pipeline properties
+        Properties props = new Properties();
+        // set the list of annotators to run
+        props.setProperty("annotators", "tokenize, ssplit, parse, sentiment");
+        // build pipeline
+        pipeline = new StanfordCoreNLP(props);
+        
+    }
     
-	public static void main(String[] args) throws IOException, ParseException{  
+    static String website;
+	public static void main(String[] args) throws IOException, ParseException{
+		    
 		init();
     	try{  
-    		//Connect mysql database server for data storing.
-    		//Reference: https://www.javatpoint.com/example-to-connect-to-the-mysql-database
     		Class.forName("com.mysql.jdbc.Driver");  
-    		Connection con=DriverManager.getConnection(
-    		"jdbc:mysql://localhost:3306/sonoo","root","root");  
+    		Connection con=DriverManager.getConnection(  
+    		"jdbc:mysql://db4free.net:3306/dmbikai0226","dmbikai0226","86401589");  
+    		
     		con.createStatement();  
     		
-    		//Read JSON file
-	        JSONParser parser = new JSONParser();
-	        JSONArray array = (JSONArray) parser.parse(new FileReader("...\\20190228_2.json"));
-	        //Create a for loop to go through each items of JSON file.
-	        for(int i = 0; i < array.size(); i++) {
-			JSONObject jsonObject = (JSONObject) array.get(i);
-			
-			String content = (String) jsonObject.get("content").toString().trim();
-        	String id = (String) jsonObject.get("id");
-            String title = (String) jsonObject.get("title");            
-            String tstamp = (String) jsonObject.get("tstamp");
-
-            //Call the method to clean content, title, tstamp.
-            content = contentClean(content);         	            
-            title = dataContent(title);
-            tstamp = dataContent(tstamp);
-			content = dataContent(content);
     		
-			//Call the method to seperate content into single sentence.
-			String[] sentenceOfContent = getSentence(content);
-			
-			int numberSentence = 1;
-			int articleID = i+1;
-			
-			//Create a for loop to go through each sentence to get sentiment score and output into database.
-    		for (int k=0 ; k < sentenceOfContent.length; k++)
-    		{
-    			String singleSentence = sentenceOfContent[k].toString();
-        		
-    			//Call the method to obtain sentiment score.
-        		int score = sentiment(singleSentence);
-        			
-        		//The mysql insert statement
-        	    String query = " insert into sentiment (article_id, url, title, tstamp, sentence_id, sentence, sentiment_score, sentiment)"
-        	          + " values (?, ?, ?, ?, ?, ?, ?, ?)";
+    		
+	        JSONParser parser = new JSONParser();
 
-        	    //Create the mysql insert preparedstatement to output each elements.
-        	    PreparedStatement preparedStmt = con.prepareStatement(query);
-        	    preparedStmt.setInt (1, articleID);
-        	    preparedStmt.setString (2, id);
-        	    preparedStmt.setString (3, title);
-        	    preparedStmt.setString (4, tstamp);
-        	    preparedStmt.setInt (5, numberSentence);
-        	    preparedStmt.setString (6, singleSentence);
-        	    preparedStmt.setInt (7, score);
-        	    preparedStmt.setString (8, scoreStr);
-        	    //Execute the preparedstatement
-        	    preparedStmt.execute();
-        	        
-        	    numberSentence++;
-        	    System.out.println("sucess" + articleID);
-        	}
-    	}	
-		con.close(); 
-		}catch(Exception e){ System.out.println(e);}  
-	}
 
-	//Data clean method
-	//Reference: https://howtodoinjava.com/regex/java-clean-ascii-text-non-printable-chars/
+	        JSONArray array = (JSONArray) parser.parse(new FileReader("F:\\new data 2\\20190516\\20190516_0.json"));
+
+
+			    for(int i = 0; i < array.size(); i++) {
+				    if (i>= 0) {
+				        	  
+						JSONObject jsonObject = (JSONObject) array.get(i);
+			            
+			            String content = (String) jsonObject.get("content").toString().trim();
+			        	String id = (String) jsonObject.get("id");
+			            String title = (String) jsonObject.get("title");            
+			            String tstamp = (String) jsonObject.get("tstamp");
+			            
+			            
+			            content = contentClean(content);
+			            		            	            
+			            title = dataContent(title);
+			            tstamp = dataContent(tstamp);
+			            tstamp = getDate(tstamp);
+		    			content = dataContent(content);
+
+		    			content = deleteAds(content, id);
+		    			
+		    			int articleID = i+1;
+		    			
+		    			int score = sentiment(content);
+	        			
+	        			
+		        		
+		        		// the mysql insert statement
+		        	    String query = " insert into sentimentForContent_0_new (article_id, url, website, title, tstamp, content, sentiment_score, sentiment)"
+		        	          + " values (?, ?, ?, ?, ?, ?, ?, ?)";
+
+		        	    // create the mysql insert preparedstatement
+		        	    PreparedStatement preparedStmt = con.prepareStatement(query);
+		        	    preparedStmt.setInt (1, articleID);
+		        	    preparedStmt.setString (2, id);
+		        	    preparedStmt.setString (3, website);
+		        	    preparedStmt.setString (4, title);
+		        	    preparedStmt.setString (5, tstamp);
+		        	    preparedStmt.setString (6, content);
+		        	    preparedStmt.setInt (7, score);
+		        	    preparedStmt.setString (8, scoreStr);
+		        	    // execute the preparedstatement
+		        	    preparedStmt.execute();
+		        	        
+		        	    System.out.println("sucess" + articleID);
+	            	}
+				}
+	
+        		con.close(); 
+        		}catch(Exception e){ System.out.println(e);}  
+
+	    }
+
     public static String dataContent(String text) throws IOException 
     {
-        //Strips off all non-ASCII characters
+        // strips off all non-ASCII characters
         text = text.replaceAll("[^\\x00-\\x7F]", "");
-        //Erases all the ASCII control characters
+ 
+        // erases all the ASCII control characters
         text = text.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "");
-        //Removes non-printable characters from Unicode
+         
+        // removes non-printable characters from Unicode
         text = text.replaceAll("\\p{C}", "");
+        
         text = text.replaceAll("[â€™]", "'");
+        
         text = text.replaceAll("[â€˜]", "'");
+        
         text = text.replaceAll("http.*?\\s", "");
+        
         text = text.replaceAll("&", "");
+        
         text = text.replaceAll("-", "");
+        
         text = text.replaceAll("@", "");
+
+
 		return text;
     } 
     
-    //Content filter method
-    //This method aims to exclude the content that has less than 200 words and has less than average 5 sentence.
-    //These content that is described above are name of advertisement.
-    public static String contentClean(String content) {	
+
+public static String contentClean(String content) {
+    	
         String []wordsOfContent = content.split("\\W+");
         String []lineOfContent = content.split("[\\r?\\n\\|\\.]+");
+        
         int AverageSentenceOfContent = wordsOfContent.length/lineOfContent.length;
+        
         if(wordsOfContent.length <200 || AverageSentenceOfContent <5) {
+
         		content = "";
+
   		}
+
 		return content;
 	}
-
-    //Separate content into sentence method 
-    private static String[] getSentence(String content) throws IOException {
-    	String[]sentenceOfContent = content.split("[\\r?\\n\\|\\.]+");
-	    return sentenceOfContent;	
-    }
     
-    //Calculate sentiment score method
-    //Reference: https://stanfordnlp.github.io/CoreNLP/api.html
+    //Clean date data
+    public static String getDate(String tstamp) throws IOException 
+    {
+	    String[]data = new String[5];
+	
+	    data = tstamp.split(" ");
+	
+	    //Formate date
+	    String date = data[2].toString() + "-" + data[1].toString()+ "-" + data[5].toString();
+
+	    return date;
+    } 
+    //Further clean content to delete irrelevant part of news and categorize news website.
+    public static String deleteAds(String content, String id) throws IOException 
+    {
+    	String webABC1 = "www.abc.net.au";
+    	String webABC2 = "mobile.abc.net.au";
+        String webABC3 = "amp.abc.net.au";
+        String webNine = "finance.nine.com.au";
+        String webNineFinance = "amp.nine.com.au";
+        String webNineHoney = "homes.nine.com.au";
+        String webNews1 = "amp.news.com.au";
+        String webNews2 = "www.news.com.au";
+        String webWatch = "watch.thewest.com.au";
+        String webWestAustralian = "thewest.com.au";
+        String webPerthNow = "www.perthnow.com.au";
+        String webExaminer = "www.examiner.com.au";
+        String webAdvocate = "www.theadvocate.com.au";
+        String webCentralWesternDaily = "www.centralwesterndaily.com.au";
+        String webBusinessInsider = "www.businessinsider.com.au";
+        String webBorderMail = "www.bordermail.com.au";
+        String webDailyAdvertiser = "www.dailyadvertiser.com.au";
+        String webStandard = "www.standard.net.au";
+
+        //ABC (Australian Broadcasting Corporation)
+        if (id.indexOf(webABC1) != -1) {
+        	if (content.indexOf("Topics:") != -1) {
+            	String[] seperateContent = content.split("Topics:");
+            	content = seperateContent[0].toString();
+        	}
+        	else {
+        		content = "";
+        	}
+        	website = "ABC (Australian Broadcasting Corporation)";
+        } 
+        //ABC News (Australian Broadcasting Corporation)
+        if (id.indexOf(webABC2) != -1) {
+        	String[] seperateContent = content.split("AESTShareEmailFacebookTwitter");
+        	content = seperateContent[0].toString();
+        	website = "ABC News (Australian Broadcasting Corporation)";
+        } 
+        //ABC News (Australian Broadcasting Corporation)
+        if (id.indexOf(webABC3) != -1) {
+        	String[] seperateContent = content.split("Top Stories");
+        	content = seperateContent[0].toString();
+        	website = "ABC News (Australian Broadcasting Corporation)";
+        } 
+        //nine.com.au
+        if (id.indexOf(webNine) != -1) {
+        	String[] seperateContent = content.split("More From Business News");
+        	content = seperateContent[0].toString();
+        	website = "nine.com.au";
+        } 
+        //nine.com.au 9Finance
+        if (id.indexOf(webNineFinance) != -1) {
+        	String[] seperateContent = content.split("Careers Advertise with us Help Terms of use Privacy");
+        	content = seperateContent[0].toString();
+        	website = "nine.com.au 9Finance";
+        } 
+        //nine.com.au 9 Honey
+        if (id.indexOf(webNineHoney) != -1) {
+        	String[] seperateContent = content.split("ShareMailTweet");
+        	content = seperateContent[0].toString();
+        	website = "nine.com.au 9 Honey";
+        } 
+        //news.com.au
+        if (id.indexOf(webNews1) != -1) {
+        	if (content.indexOf("read next") != -1) {
+            	String[] seperateContent = content.split("read next");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("A NOTE ABOUT RELEVANT ADVERTISING") != -1) {
+        		String[] seperateContent = content.split("A NOTE ABOUT RELEVANT ADVERTISING");
+            	content = seperateContent[0].toString();
+        	}
+        	website = "news.com.au";
+        } 
+        //news.com.au
+        if (id.indexOf(webNews2) != -1) {
+        	if (content.indexOf("Originally published as") != -1) {
+            	String[] seperateContent = content.split("Originally published as");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("Share on Facebook Share on Facebook Share on Twitter Share on Twitter Share via Email Share via Email") != -1) {
+        		String[] seperateContent = content.split("Share on Facebook Share on Facebook Share on Twitter Share on Twitter Share via Email Share via Email");
+            	content = seperateContent[0].toString();
+        	}
+        	website = "news.com.au";
+        } 
+        //news.com.au
+        if (id.indexOf(webWatch) != -1) {
+        	content = "";
+        	website = "news.com.au";
+        }
+        //The West Australian
+        if (id.indexOf(webWestAustralian) != -1) {
+        	if (content.indexOf("From around the site") != -1) {
+            	String[] seperateContent = content.split("From around the site");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("Topics Real Estate") != -1) {
+        		String[] seperateContent = content.split("Topics Real Estate");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("Share to Facebook Share to Twitter") != -1) {
+        		String[] seperateContent = content.split("Share to Facebook Share to Twitter");
+            	content = seperateContent[0].toString();
+        	}
+        	website = "The West Australian";
+        } 
+        //PerthNow
+        if (id.indexOf(webPerthNow) != -1) {
+        	if (content.indexOf("Originally published as") != -1) {
+            	String[] seperateContent = content.split("Originally published as");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("Facebook Icon Twitter Icon Email Icon") != -1) {
+        		String[] seperateContent = content.split("Facebook Icon Twitter Icon Email Icon");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("Share to Facebook Share to Twitter") != -1) {
+        		String[] seperateContent = content.split("Share to Facebook Share to Twitter");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("About Us Contact Us Careers Letter") != -1) {
+        		String[] seperateContent = content.split("About Us Contact Us Careers Letter");
+            	content = seperateContent[0].toString();
+        	}
+        	website = "PerthNow";
+        } 
+        //The Examiner
+        if (id.indexOf(webExaminer) != -1) {
+        	String[] seperateContent = content.split("facebook SHARE twitter TWEET email whatsapp Follow us Local Business View");
+        	content = seperateContent[0].toString();
+        	website = "The Examiner";
+        }
+        //The Advocate
+        if (id.indexOf(webAdvocate) != -1) {
+        	String[] seperateContent = content.split("facebook SHARE twitter TWEET email whatsapp Follow us Local Business View");
+        	content = seperateContent[0].toString();
+        	website = "The Advocate";
+        }
+        //Central Western Daily
+        if (id.indexOf(webCentralWesternDaily) != -1) {
+        	if (content.indexOf("DO YOU WANT MORE ORANGE NEWS") != -1) {
+            	String[] seperateContent = content.split("DO YOU WANT MORE ORANGE NEWS");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("Receive our free newsletters delivered to your inbox") != -1) {
+        		String[] seperateContent = content.split("Receive our free newsletters delivered to your inbox");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("facebook SHARE twitter TWEET email whatsapp") != -1) {
+        		String[] seperateContent = content.split("facebook SHARE twitter TWEET email whatsapp");
+            	content = seperateContent[0].toString();
+        	}
+        	else {
+        		content = "";
+        	}
+        	website = "Central Western Daily";
+        } 
+        //Business Insider
+        if (id.indexOf(webBusinessInsider) != -1) {
+        	if (content.indexOf("Business Insider Emails  AlertSite highlights each day to your inbox") != -1) {
+            	String[] seperateContent = content.split("Business Insider Emails  AlertSite highlights each day to your inbox");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("Email AddressJoin") != -1) {
+        		String[] seperateContent = content.split("Email AddressJoin");
+            	content = seperateContent[0].toString();
+        	}
+        	if (content.indexOf("Follow Business Insider Australia on Facebook ; Twitter ; LinkedIn ; and Instagram") != -1) {
+        		String[] seperateContent = content.split("Follow Business Insider Australia on Facebook ; Twitter ; LinkedIn ; and Instagram");
+            	content = seperateContent[0].toString();
+        	}
+        	website = "Business Insider";
+        } 
+        //The Border Mail
+        if (id.indexOf(webBorderMail) != -1) {
+        	if (content.indexOf("facebook SHARE twitter TWEET email whatsapp") != -1) {
+            	String[] seperateContent = content.split("facebook SHARE twitter TWEET email whatsapp");
+            	content = seperateContent[0].toString();
+        	}
+        	else {
+        		content = "";
+        	}
+        	website = "The Border Mail";
+        }
+        //The Daily Advertiser
+        if (id.indexOf(webDailyAdvertiser) != -1) {
+        	if (content.indexOf("facebook SHARE twitter TWEET email") != -1) {
+            	String[] seperateContent = content.split("facebook SHARE twitter TWEET email");
+            	content = seperateContent[0].toString();
+        	}
+        	else {
+        		content = "";
+        	}
+        	website = "The Daily Advertiser";
+        }
+        //The Standard
+        if (id.indexOf(webStandard) != -1) {
+        	if (content.indexOf("facebook SHARE twitter TWEET email") != -1) {
+            	String[] seperateContent = content.split("facebook SHARE twitter TWEET email");
+            	content = seperateContent[0].toString();
+        	}
+        	else {
+        		content = "";
+        	}
+        	website = "The Standard";
+        }
+
+	return content;
+    } 
+
     public static int sentiment(String singleSentence) throws IOException
     {
- 		int score = 2; //Default as Neutral. 1 = Negative, 2 = Neutral, 3 = Positive
+ 		int score = 2; // Default as Neutral. 1 = Negative, 2 = Neutral, 3 = Positive
+    	 
 		Annotation annotation = pipeline.process(singleSentence);
     	for(CoreMap sentence : annotation.get(CoreAnnotations.SentencesAnnotation.class))
     	{
@@ -151,7 +407,9 @@ public class codeForDissertation{
     		Tree tree = sentence.get(SentimentAnnotatedTree.class);
     		score = RNNCoreAnnotations.getPredictedClass(tree);
     		System.out.println(scoreStr + "\t" + score + "\t" + sentence);
+    		
     	}
 		return score;
     }
+
 }
